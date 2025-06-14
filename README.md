@@ -29,12 +29,13 @@
 계약, 옵션, 생활 정보 등 문서 기반 지식 → RAG 응답에 활용
 
 ### ⚙️ 기술 구현
-graph LR
-A[CSV 데이터 전처리 및 JSON 변환] --> B[FAISS 벡터 저장소 구축]
-C[PDF 문서 청크화] --> D[임베딩 및 FAISS 인덱싱]
-B --> E[RetrievalQA (매물)]
-D --> E[RetrievalQA (생활 가이드)]
-E --> F[LLM 기반 응답 생성 및 출력]
+
+![image](https://github.com/user-attachments/assets/dec85a25-3f99-4dc0-8677-60fedd08ccc5)
+
+![image](https://github.com/user-attachments/assets/5baa4089-10a3-46d8-b824-9e4a87cc9e8a)
+
+![image](https://github.com/user-attachments/assets/080ebb8f-e3aa-4e69-b2f1-35baa4172fc1)
+
 
 🔍 질의 기반 문서 분류 및 필터링
 
