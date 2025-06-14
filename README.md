@@ -29,14 +29,13 @@
 계약, 옵션, 생활 정보 등 문서 기반 지식 → RAG 응답에 활용
 
 ### ⚙️ 기술 구현
-mermaid
-코드 복사
 graph LR
 A[CSV 데이터 전처리 및 JSON 변환] --> B[FAISS 벡터 저장소 구축]
 C[PDF 문서 청크화] --> D[임베딩 및 FAISS 인덱싱]
 B --> E[RetrievalQA (매물)]
 D --> E[RetrievalQA (생활 가이드)]
 E --> F[LLM 기반 응답 생성 및 출력]
+
 🔍 질의 기반 문서 분류 및 필터링
 
 📐 JSON → 자연어 변환 / 거리·보증금 조건 필터링
