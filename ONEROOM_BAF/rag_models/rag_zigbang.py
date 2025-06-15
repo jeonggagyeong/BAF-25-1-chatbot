@@ -9,7 +9,7 @@ from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyMuPDFLoader
 
-# ✅ 환경 설정
+# 환경 설정
 os.environ["OPENAI_API_KEY"] = "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"
 embedding = OpenAIEmbeddings()
 
@@ -75,7 +75,7 @@ def convert_json_docs_to_text(json_docs):
     return documents
 
     
-# ✅ 질의 분석 함수들
+# 질의 분석 함수들
 def extract_station_and_minutes(query: str):
     station_match = re.search(r'([가-힣]+)역', query)
     time_match = re.search(r'(\d+)\s*분\s*이내', query)
@@ -98,7 +98,7 @@ def classify_query(query: str):
         return "csv"
     return "pdf"
 
-# ✅ 매물 JSON 로딩 및 필터링 처리
+# 매물 JSON 로딩 및 필터링 처리
 def load_json_to_documents(json_path):
     with open(json_path, 'r', encoding='utf-8') as f:
         raw_data = json.load(f)
@@ -152,7 +152,7 @@ def filter_docs(docs, id_to_raw, query):
 
 
 
-# ✅ CSV 기반 벡터스토어 생성 또는 로딩
+# CSV 기반 벡터스토어 생성 또는 로딩
 def get_csv_qa(json_path, vector_path, query):
     docs, id_to_raw = load_json_to_documents(json_path)
     filtered_docs = filter_docs(docs, id_to_raw, query)
@@ -195,7 +195,7 @@ def get_csv_qa(json_path, vector_path, query):
     llm=ChatOpenAI(temperature=0),
     retriever=vs.as_retriever(search_kwargs={"k": 10}),
     chain_type="stuff",
-    chain_type_kwargs={"prompt": prompt},  # ✅ 여기에 프롬프트 넣기
+    chain_type_kwargs={"prompt": prompt},  # 여기에 프롬프트 넣기
     return_source_documents=True
     )
     
@@ -203,7 +203,7 @@ def get_csv_qa(json_path, vector_path, query):
 
 
 
-# ✅ PDF 기반 벡터스토어 구성
+# PDF 기반 벡터스토어 구성
 def get_pdf_qa(pdf_path):
     loader = PyMuPDFLoader(pdf_path)
     docs = loader.load()
@@ -241,7 +241,7 @@ def get_pdf_qa(pdf_path):
     )
     return qa
 
-# ✅ 통합 챗봇
+# 통합 챗봇
 
 def unified_chatbot(query: str):
     print(f"\n💬 사용자 질문: {query}")
@@ -275,7 +275,7 @@ def unified_chatbot(query: str):
         for i, doc in enumerate(result['source_documents']):
             print(f"--- 출처 {i+1} ---\n{doc.page_content[:300]}\n")
 
-# ✅ 테스트
+# 테스트
 if __name__ == "__main__":
     test_queries = [
         "부동산 중개보수의 최고 요율이란 무엇을 의미하나요?"
