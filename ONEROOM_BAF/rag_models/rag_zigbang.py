@@ -10,7 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyMuPDFLoader
 
 # 환경 설정
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "your api key"
 embedding = OpenAIEmbeddings()
 
 def safe_get(d, key):
@@ -70,12 +70,10 @@ def convert_json_docs_to_text(json_docs):
                 }
             ))
         except Exception as e:
-            print("❌ 변환 실패:", e)
+            print(" 변환 실패:", e)
 
     return documents
 
-    
-# 질의 분석 함수들
 def extract_station_and_minutes(query: str):
     station_match = re.search(r'([가-힣]+)역', query)
     time_match = re.search(r'(\d+)\s*분\s*이내', query)
@@ -98,23 +96,18 @@ def classify_query(query: str):
         return "csv"
     return "pdf"
 
-# 매물 JSON 로딩 및 필터링 처리
 def load_json_to_documents(json_path):
     with open(json_path, 'r', encoding='utf-8') as f:
         raw_data = json.load(f)
     id_to_raw = {entry.get("매물ID"): entry for entry in raw_data}
-    
-    # JSON을 Document로 변환
+
     raw_docs = [
         Document(page_content=json.dumps(entry), metadata={"매물ID": entry.get("매물ID")})
         for entry in raw_data
     ]
-    
-    # 자연어 텍스트로 변환
+
     converted_docs = convert_json_docs_to_text(raw_docs)
     return converted_docs, id_to_raw
-
-
 
 def normalize_station_name(name):
     return name.replace("역", "").strip() if name else ""
@@ -150,60 +143,57 @@ def filter_docs(docs, id_to_raw, query):
 
     return filtered
 
-
-
-# CSV 기반 벡터스토어 생성 또는 로딩
 def get_csv_qa(json_path, vector_path, query):
     docs, id_to_raw = load_json_to_documents(json_path)
-    filtered_docs = filter_docs(docs, id_to_raw, query)
+
+    if os.path.exists(vector_path):
+        vs = FAISS.load_local(vector_path, embedding, allow_dangerous_deserialization=True)
+    else:
+        splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
+        split_docs = splitter.split_documents(docs)
+        vs = FAISS.from_documents(split_docs, embedding)
+        vs.save_local(vector_path)
+
+    top_docs = vs.similarity_search(query, k=50)
+    filtered_docs = filter_docs(top_docs, id_to_raw, query)
 
     if not filtered_docs:
-        print("❗조건에 맞는 매물이 없습니다.")
+        print(" 조건에 맞는 매물이 없습니다.")
         return None, id_to_raw
 
-    print(f"🎯 조건에 맞는 매물 수: {len(filtered_docs)}")
+    print(f" 조건에 맞는 매물 수 (50개 중): {len(filtered_docs)}")
 
-    
     splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
-    split_docs = splitter.split_documents(filtered_docs)
-    vs = FAISS.from_documents(split_docs, embedding)
-    vs.save_local(vector_path)
+    split_filtered = splitter.split_documents(filtered_docs)
+    vs_filtered = FAISS.from_documents(split_filtered, embedding)
 
     prompt = PromptTemplate(
-    input_variables=["context", "question"],
-    template="""
-    당신은 부동산 매물 추천을 도와주는 챗봇입니다.
-    다음은 매물 데이터입니다.
-    문서에 보증금, 거리 등의 조건이 언급되어 있으면 그에 맞는 매물을 골라서 부드럽고 자연스러운 말투로 간단히 요약해 설명해주세요.
-    
+        input_variables=["context", "question"],
+        template="""
+당신은 부동산 매물 추천을 도와주는 챗봇입니다.
+다음은 매물 데이터입니다.
+문서에 보증금, 거리 등의 조건이 언급되어 있으면 그에 맞는 매물을 골라서 부드럽고 자연스러운 말투로 간단히 요약해 설명해주세요.
 
-    
-    
+[문서 내용]
+{context}
 
+[질문]
+{question}
 
-    [문서 내용]
-    {context}
-
-    [질문]
-    {question}
-
-    [답변]
-    """
-    )    
+[답변]
+"""
+    )
 
     qa = RetrievalQA.from_chain_type(
-    llm=ChatOpenAI(temperature=0),
-    retriever=vs.as_retriever(search_kwargs={"k": 10}),
-    chain_type="stuff",
-    chain_type_kwargs={"prompt": prompt},  # 여기에 프롬프트 넣기
-    return_source_documents=True
+        llm=ChatOpenAI(temperature=0),
+        retriever=vs_filtered.as_retriever(search_kwargs={"k": 10}),
+        chain_type="stuff",
+        chain_type_kwargs={"prompt": prompt},
+        return_source_documents=True
     )
-    
+
     return qa, id_to_raw
 
-
-
-# PDF 기반 벡터스토어 구성
 def get_pdf_qa(pdf_path):
     loader = PyMuPDFLoader(pdf_path)
     docs = loader.load()
@@ -241,46 +231,39 @@ def get_pdf_qa(pdf_path):
     )
     return qa
 
-# 통합 챗봇
-
 def unified_chatbot(query: str):
-    print(f"\n💬 사용자 질문: {query}")
+    print(f"\n 사용자 질문: {query}")
     source = classify_query(query)
     if source == "csv":
         qa, id_to_raw = get_csv_qa("./data/매물_데이터.json", "./vectorstore", query)
+        if qa is None:
+            return
         result = qa.invoke(query)
 
-        # ✅ 조건에 맞는 매물 ID만 필터링
         allowed_ids = set(doc.metadata.get("매물ID") for doc in result['source_documents'])
 
-        print("\n📦 매물 결과:")
+        print("\n 매물 결과:")
         count = 0
         for i, doc in enumerate(result['source_documents']):
             doc_id = doc.metadata.get("매물ID")
             if doc_id not in allowed_ids:
                 continue
             raw = id_to_raw.get(doc_id, {})
-            print(f"▶️ 매물 {count+1}")
-            print(f"- 위치: {raw.get('주소(법정동)', '정보 없음')} / 보증금: {raw.get('보증금(만원)', '정보 없음')} / 월세: {raw.get('월세(만원)', '정보 없음')}만원")
-            print(f"- 충무로역까지 시간: {raw.get('매물_부터_충무로1출까지_시간_분', '정보 없음')}분")
-            print("-" * 40)
             count += 1
+            
 
-        print("\n🧠 LLM 응답:", result['result'])
+        print("\n LLM 응답:", result['result'])
     else:
-        qa = get_pdf_qa(r"C:\\Users\\jeong\\baf_langchain\\data\\자취백과사전_2025 (1).pdf")
+        qa = get_pdf_qa(r"./data/자취백과사전_2025 (1).pdf")
         result = qa.invoke(query)
-        print("\n📘 자취백과 응답:", result['result'])
-        print("\n📄 출처 문서:")
+        print("\n 자취백과 응답:", result['result'])
+        print("\n 출처 문서:")
         for i, doc in enumerate(result['source_documents']):
             print(f"--- 출처 {i+1} ---\n{doc.page_content[:300]}\n")
 
-# 테스트
 if __name__ == "__main__":
     test_queries = [
-        "부동산 중개보수의 최고 요율이란 무엇을 의미하나요?"
-        
-       
+        "충무로역 30분 이내 보증금 1000만원 이하 원룸 찾아줘"
     ]
     for q in test_queries:
         unified_chatbot(q)
