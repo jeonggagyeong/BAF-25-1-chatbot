@@ -37,11 +37,32 @@
 ![image](https://github.com/user-attachments/assets/080ebb8f-e3aa-4e69-b2f1-35baa4172fc1)
 
 
-🔍 질의 기반 문서 분류 및 필터링
+## 🔍 20260331 수정사항
 
-📐 JSON → 자연어 변환 / 거리·보증금 조건 필터링
+### 1. 벡터스토어 FAISS → Chroma 교체
 
-🧠 OpenAI 임베딩 → FAISS 유사도 기반 검색
+- 메타데이터 수치 필터링 지원을 위해 변경
+- 보증금, 월세, 소요시간 등 수치 조건을 DB 레벨에서 필터링
 
-🧾 Chunk size: PDF(800/100), CSV(400/50)
+### 2. OpenAI → 무료 모델로 교체
+
+- 임베딩: HuggingFaceEmbeddings (paraphrase-multilingual-MiniLM-L12-v2)
+- LLM: ChatOllama (qwen2.5) → 한국어 성능 개선
+
+### 3. SelfQueryRetriever 도입
+
+- 기존 정규표현식 필터 (extract_deposit_limit, build_chroma_filter) 제거
+- LLM이 자동으로 질문 분석 → 메타데이터 필터 생성
+- 메타데이터 속성명 한글 → 영어로 변경 (유니코드 깨짐 방지)
+
+### 4. 질의 분류 개선 (classify_query)
+
+- 기존 키워드 방식 → 키워드 + LLM 하이브리드 방식
+- 명확한 키워드면 즉시 분류, 애매할 때만 LLM 호출
+
+### 5. 벡터스토어 캐싱
+
+- 매 실행마다 새로 생성하던 방식 → 저장된 거 있으면 불러오기
+
+
 
